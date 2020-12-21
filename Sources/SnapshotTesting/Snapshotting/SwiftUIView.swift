@@ -107,13 +107,15 @@ extension Snapshotting where Value: SwiftUI.View, Format == NSImage {
         let hostingController = NSHostingController.init(rootView: view)
         controller = hostingController
 
-        let window = NSWindow(contentViewController: controller)
-        let windowController = NSWindowController(window: window)
-        windowController.showWindow(nil)
-
-        if let contentView = windowController.window?.contentView {
-          let initialSize = contentView.frame.size
           return Async { callback in
+            let window = NSWindow(contentViewController: controller)
+            let windowController = NSWindowController(window: window)
+            windowController.showWindow(nil)
+            windowController.window?.makeKey()
+
+            let contentView = window.contentView!
+            let initialSize = contentView.frame.size
+
             addImagesForRenderedViews(contentView).sequence().run { views in
               let bitmapRep = contentView.bitmapImageRepForCachingDisplay(in: contentView.bounds)!
               contentView.cacheDisplay(in: contentView.bounds, to: bitmapRep)
@@ -124,8 +126,6 @@ extension Snapshotting where Value: SwiftUI.View, Format == NSImage {
               contentView.frame.size = initialSize
             }
           }
-        }
-        fatalError()
       }
   }
 
