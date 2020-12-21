@@ -54,8 +54,6 @@ extension Snapshotting where Value: SwiftUI.View, Format == UIImage {
       return SimplySnapshotting.image(precision: precision).asyncPullback { view in
         var config = config
 
-        let controller: UIViewController
-
         if config.size != nil {
           controller = UIHostingController.init(
             rootView: view
@@ -80,4 +78,58 @@ extension Snapshotting where Value: SwiftUI.View, Format == UIImage {
   }
 }
 #endif
+
+#if os(macOS)
+@available(macOS 10.15, *)
+extension Snapshotting where Value: SwiftUI.View, Format == NSImage {
+
+  /// A snapshot strategy for comparing SwiftUI Views based on pixel equality.
+  public static var image: Snapshotting {
+    return .image()
+  }
+
+  /// A snapshot strategy for comparing SwiftUI Views based on pixel equality.
+  ///
+  /// - Parameters:
+  ///   - drawHierarchyInKeyWindow: Utilize the simulator's key window in order to render `UIAppearance` and `UIVisualEffect`s. This option requires a host application for your tests and will _not_ work for framework test targets.
+  ///   - precision: The percentage of pixels that must match.
+  ///   - size: A view size override.
+  ///   - traits: A trait collection override.
+  public static func image(
+    drawHierarchyInKeyWindow: Bool = false,
+    precision: Float = 1,
+    layout: SwiftUISnapshotLayout = .sizeThatFits
+    )
+    -> Snapshotting {
+      return SimplySnapshotting.image(precision: precision).asyncPullback { view in
+
+        let controller: NSViewController
+        let hostingController = NSHostingController.init(rootView: view)
+        controller = hostingController
+
+        let window = NSWindow(contentViewController: controller)
+        let windowController = NSWindowController(window: window)
+        windowController.showWindow(nil)
+
+        if let contentView = windowController.window?.contentView {
+          let initialSize = contentView.frame.size
+          return Async { callback in
+            addImagesForRenderedViews(contentView).sequence().run { views in
+              let bitmapRep = contentView.bitmapImageRepForCachingDisplay(in: contentView.bounds)!
+              contentView.cacheDisplay(in: contentView.bounds, to: bitmapRep)
+              let image = NSImage(size: contentView.bounds.size)
+              image.addRepresentation(bitmapRep)
+              callback(image)
+              views.forEach { $0.removeFromSuperview() }
+              contentView.frame.size = initialSize
+            }
+          }
+        }
+        fatalError()
+      }
+  }
+
+}
+#endif
+
 #endif

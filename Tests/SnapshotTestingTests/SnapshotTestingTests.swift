@@ -1048,6 +1048,27 @@ final class SnapshotTestingTests: XCTestCase {
     #endif
   }
 
+  @available(macOS 10.15, *)
+  func testSwiftUIView_macOS() {
+    #if os(macOS)
+    struct MyView: SwiftUI.View {
+      var body: some SwiftUI.View {
+        HStack {
+          Text("✔️")
+          Text("Checked").fixedSize()
+        }
+        .padding(5)
+        .background(RoundedRectangle(cornerRadius: 5.0).fill(Color.blue))
+        .padding(10)
+      }
+    }
+
+    let view = MyView().background(Color.yellow)
+
+    assertSnapshot(matching: view, as: .image())
+    #endif
+  }
+
   @available(tvOS 13.0, *)
   func testSwiftUIView_tvOS() {
     #if os(tvOS)
